@@ -34,7 +34,7 @@ class Client:
     while len(input_buffer):
       self.last_input = time()
       command = Command()
-      input_buffer = command.decode(input_buffer)
+      input_buffer = command.parse(input_buffer)
       self.input_commands.append(command)
   
   def send_output(self):

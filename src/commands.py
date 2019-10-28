@@ -11,12 +11,11 @@ def find_char(string='', char=''):
     index = len(string)
   return index
 class Command:
-  # TODO verify the special parsing characters cannot be in the command parts
   def __init__(self):
     self.command = ''
     self.args = []
 
-  def decode(self, input_string=''):
+  def parse(self, input_string=''):
     # isolate the first command in the input string
     end_index = find_char(input_string, command_end)
     command_string = input_string[:end_index]
