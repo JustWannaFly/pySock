@@ -1,7 +1,7 @@
 
-command_end = '\n'
-function_end = ':'
-arg_separator = ','
+command_end = b'\n'
+function_end = b':'
+arg_separator = b','
 
 
 def find_char(string='', char=''):
@@ -15,29 +15,29 @@ class Command:
     self.command = ''
     self.args = []
 
-  def parse(self, input_string=''):
+  def parse(self, input_data=b''):
     # isolate the first command in the input string
-    end_index = find_char(input_string, command_end)
-    command_string = input_string[:end_index]
+    input_parts = input_data.partition(command_end)
+    this_command = input_parts[0]
     
     # parse the command's function
-    function_end_index = find_char(command_string, function_end)
-    self.command = command_string[:function_end_index]
-    command_string = command_string[function_end_index + 1:]
+    command_parts = this_command.partition(function_end)
+    self.command = command_parts[0].decode()
+    this_command = command_parts[2]
 
     # parse the command's args
-    while len(command_string):
-      separator_index = find_char(command_string, arg_separator)
-      self.args.append(command_string[:separator_index])
-      command_string = command_string[separator_index + 1:]
+    while len(this_command):
+      arg_parts = this_command.partition(arg_separator)
+      self.args.append(arg_parts[0].decode())
+      this_command = arg_parts[2]
 
     # return any input after the command ended for future processing
-    return input_string[end_index + 1:]
+    return input_parts[2]
 
   def encode(self): 
-    output = self.command + function_end
+    output = self.command + function_end.decode()
     for arg in self.args:
-      output += arg + arg_separator
+      output += arg + arg_separator.decode()
     # remove the last separator as it's not needed
     output = output[:-1]
-    return output + command_end
+    return output + command_end.decode()

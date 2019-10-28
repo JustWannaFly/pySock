@@ -19,22 +19,16 @@ class Client:
   
   def read_input(self):
     # read all bytes into an input_buffer
-    input_buffer = ''
-    read_buffer_size = 64
-    read_bytes = self.connection.recv(read_buffer_size)
-    while len(read_bytes):
-      input_buffer += read_bytes.decode()
-      if len(read_bytes) < read_buffer_size:
-        read_bytes = b''
-      try:
-        read_bytes = self.connection.recv(read_buffer_size)
-      except BlockingIOError:
-        read_bytes = b''
+    input_data = self.connection.recv(2048)
+    if len(input_data) > 1024:
+      print('Client sending too much data. Closing client:', self.address)
+      self.disconnect = True
+      input_data = b''
     # parse input_buffer into commands
-    while len(input_buffer):
+    while len(input_data):
       self.last_input = time()
       command = Command()
-      input_buffer = command.parse(input_buffer)
+      input_data = command.parse(input_data)
       self.input_commands.append(command)
   
   def send_output(self):
@@ -102,7 +96,7 @@ class Server:
       socket = key.fileobj
       client = key.data
       if client is None:
-        self.__process_connect(socket) 
+        self.__process_connect(socket)
       else:
         try:
           client.read_input()
