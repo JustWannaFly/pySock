@@ -11,7 +11,6 @@ class Client:
   def __init__(self, connection, address):
     self.connection = connection
     self.address = address
-    self.input_buffer = ''
     self.output_buffer = ''
     self.last_input = time()
     self.input_commands = []
@@ -19,26 +18,39 @@ class Client:
     self.disconnect = False
   
   def read_input(self):
-    self.input_buffer = self.input_buffer + self.connection.recv(32).decode()
-    while len(self.input_buffer):
+    # read all bytes into an input_buffer
+    input_buffer = ''
+    read_buffer_size = 64
+    read_bytes = self.connection.recv(read_buffer_size)
+    while len(read_bytes):
+      input_buffer += read_bytes.decode()
+      if len(read_bytes) < read_buffer_size:
+        read_bytes = b''
+      try:
+        read_bytes = self.connection.recv(read_buffer_size)
+      except BlockingIOError:
+        read_bytes = b''
+    # parse input_buffer into commands
+    while len(input_buffer):
       self.last_input = time()
       command = Command()
-      self.input_buffer = command.decode(self.input_buffer)
+      input_buffer = command.decode(input_buffer)
       self.input_commands.append(command)
   
   def send_output(self):
+    # encode output_commands into an output_buffer
+    output_buffer = ''
     while len(self.output_commands):
       command = self.output_commands.pop(0)
-      self.output_buffer += command.encode()
-
-    if len(self.output_buffer):
-      encoded_output = self.output_buffer.encode()
+      output_buffer += command.encode()
+    # send output_buffer to client as bytes
+    if output_buffer:
+      encoded_output = output_buffer.encode()
       print('Output from:', self.address, 'data:', encoded_output)
       self.connection.sendall(encoded_output)
-      self.output_buffer = ''
 
   def step(self):
-    while len(self.input_commands):
+    if len(self.input_commands):
       command = self.input_commands.pop(0)
       self.output_commands.append(command)
   
