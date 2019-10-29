@@ -2,20 +2,27 @@ import socket
 import selectors
 import types
 from time import time
-from commands import Command
+from commands import Command, SERVER_COMMANDS
 
 HOST = '127.0.0.1'
 PORT = 4321
+PROTOCOL_VERSION = '1'
+
 
 class Client:
+  output_buffer = ''
+  input_commands = []
+  output_commands = []
+  disconnect = False
+  
   def __init__(self, connection, address):
     self.connection = connection
     self.address = address
-    self.output_buffer = ''
     self.last_input = time()
-    self.input_commands = []
-    self.output_commands = []
-    self.disconnect = False
+    self.commands = {
+      SERVER_COMMANDS.login: Client.do_login,
+      SERVER_COMMANDS.logout: Client.close
+    }
   
   def read_input(self):
     # read all bytes into an input_buffer
@@ -46,10 +53,29 @@ class Client:
   def step(self):
     if len(self.input_commands):
       command = self.input_commands.pop(0)
-      self.output_commands.append(command)
+      if command.command in self.commands:
+        (self.commands[command.command])(self, command.args)
+      else:
+        self.output_commands.append(command)
   
-  def close(self):
-    print('closing Client:', self.address)
+  def do_login(self, args):
+    if not len(args) == 3:
+      print('Malformed login request from', self.address)
+      self.close()
+      return
+    username = args[0]
+    password = args[1]
+    version = args[2]
+    if not version == PROTOCOL_VERSION:
+      print('login request with bad version from', self.address)
+      self.close()
+      return
+    # TODO implement login logic
+    pass
+    
+
+  def close(self, args=[]):
+    print('logging out', self.address)
     self.connection.close()
 
 class Server:

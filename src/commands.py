@@ -1,15 +1,13 @@
+from enum import Enum
 
 command_end = b'\n'
 function_end = b':'
 arg_separator = b','
 
+class SERVER_COMMANDS(Enum):
+  login = 'login'
+  logout = 'logout'
 
-def find_char(string='', char=''):
-  """ Returns the index of the first occurence of a character in a string or len(string) if character is not found """
-  index = string.find(char)
-  if index < 0:
-    index = len(string)
-  return index
 class Command:
   def __init__(self):
     self.command = ''
