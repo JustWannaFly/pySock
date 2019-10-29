@@ -1,3 +1,4 @@
+import shelve
 import socket
 import selectors
 import types
@@ -10,12 +11,13 @@ PROTOCOL_VERSION = '1'
 
 
 class Client:
-  output_buffer = ''
-  input_commands = []
-  output_commands = []
-  disconnect = False
   
   def __init__(self, connection, address):
+    self.output_buffer = ''
+    self.input_commands = []
+    self.output_commands = []
+    self.disconnect = False
+    self.player = None
     self.connection = connection
     self.address = address
     self.last_input = time()
@@ -70,8 +72,18 @@ class Client:
       print('login request with bad version from', self.address)
       self.close()
       return
-    # TODO implement login logic
-    pass
+    with shelve.open('data/users') as users:
+      if not username in users:
+        self.disconnect = True
+        print('User not found:', username)
+      else:
+        player = users[username]
+        if not player.check_password(password):
+          self.disconnect = True
+          print('Bad credentials for "', username, '"')
+        else:
+          print('Logging in "', username, '" from', self.address)
+          self.player = player
     
 
   def close(self, args=[]):
@@ -92,7 +104,7 @@ class Server:
     client = Client(connection, address)
     self.clients[address] = client
     self.selector.register(connection, selectors.EVENT_READ, data=client)
-    print('login from', address)
+    print('Initial connection from', address)
     print('Total Clients:', len(self.clients))
   
   def __process_disconnect(self, client):

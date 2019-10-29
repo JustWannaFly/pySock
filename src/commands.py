@@ -4,7 +4,7 @@ command_end = b'\n'
 function_end = b':'
 arg_separator = b','
 
-class SERVER_COMMANDS(Enum):
+class SERVER_COMMANDS:
   login = 'login'
   logout = 'logout'
 
