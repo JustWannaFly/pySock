@@ -1,6 +1,7 @@
 from hashlib import sha256
+import world
 
-class Player:
+class Player(world.Entity):
   password = ''
 
   def __init__(self, username):

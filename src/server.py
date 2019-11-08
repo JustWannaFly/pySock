@@ -57,8 +57,10 @@ class Client:
       command = self.input_commands.pop(0)
       if command.command in self.commands:
         (self.commands[command.command])(self, command.args)
-      else:
-        self.output_commands.append(command)
+      elif self.player:
+        self.player.do_command(command)
+        if len(self.player.output_queue):
+          self.output_commands.append(self.player.output_queue)
   
   def do_login(self, args):
     if not len(args) == 3:
