@@ -60,7 +60,7 @@ class Client:
       elif self.player:
         self.player.do_command(command)
         if len(self.player.output_queue):
-          self.output_commands.append(self.player.output_queue)
+          self.output_commands.extend(self.player.output_queue)
   
   def do_login(self, args):
     if not len(args) == 3:
