@@ -1,17 +1,23 @@
-from enum import Enum
-
 command_end = b'\n'
-function_end = b':'
-arg_separator = b','
+action_end = b'~'
+arg_separator = b';'
 
 class SERVER_COMMANDS:
   login = 'login'
   logout = 'logout'
 
-class Command:
+class PLAYER_COMMANDS:
+  move = 'move'
+
+class Message:
   def __init__(self):
-    self.command = ''
+    self.action = ''
     self.args = []
+
+  def build(self, action, args=[]):
+    self.action = action
+    for arg in args:
+      self.args.append(str(arg))
 
   def parse(self, input_data=b''):
     # isolate the first command in the input string
@@ -19,8 +25,8 @@ class Command:
     this_command = input_parts[0]
     
     # parse the command's function
-    command_parts = this_command.partition(function_end)
-    self.command = command_parts[0].decode()
+    command_parts = this_command.partition(action_end)
+    self.action = command_parts[0].decode()
     this_command = command_parts[2]
 
     # parse the command's args
@@ -33,7 +39,7 @@ class Command:
     return input_parts[2]
 
   def encode(self): 
-    output = self.command + function_end.decode()
+    output = self.action + action_end.decode()
     for arg in self.args:
       output += arg + arg_separator.decode()
     # remove the last separator as it's not needed

@@ -3,7 +3,7 @@ import socket
 import selectors
 import types
 from time import time
-from commands import Command, SERVER_COMMANDS
+from commands import Message, SERVER_COMMANDS
 
 HOST = '127.0.0.1'
 PORT = 4321
@@ -13,17 +13,16 @@ PROTOCOL_VERSION = '1'
 class Client:
   
   def __init__(self, connection, address):
-    self.output_buffer = ''
-    self.input_commands = []
-    self.output_commands = []
+    self.input_messages = []
+    self.output_messages = []
     self.disconnect = False
     self.player = None
     self.connection = connection
     self.address = address
     self.last_input = time()
-    self.commands = {
+    self.messages = {
       SERVER_COMMANDS.login: Client.do_login,
-      SERVER_COMMANDS.logout: Client.close
+      SERVER_COMMANDS.logout: Client.do_logout
     }
   
   def read_input(self):
@@ -33,19 +32,19 @@ class Client:
       print('Client sending too much data. Closing client:', self.address)
       self.disconnect = True
       input_data = b''
-    # parse input_buffer into commands
+    # parse input_buffer into messages
     while len(input_data):
       self.last_input = time()
-      command = Command()
-      input_data = command.parse(input_data)
-      self.input_commands.append(command)
+      message = Message()
+      input_data = message.parse(input_data)
+      self.input_messages.append(message)
   
   def send_output(self):
-    # encode output_commands into an output_buffer
+    # encode output_messages into an output_buffer
     output_buffer = ''
-    while len(self.output_commands):
-      command = self.output_commands.pop(0)
-      output_buffer += command.encode()
+    while len(self.output_messages):
+      message = self.output_messages.pop(0)
+      output_buffer += message.encode()
     # send output_buffer to client as bytes
     if output_buffer:
       encoded_output = output_buffer.encode()
@@ -53,14 +52,14 @@ class Client:
       self.connection.sendall(encoded_output)
 
   def step(self):
-    if len(self.input_commands):
-      command = self.input_commands.pop(0)
-      if command.command in self.commands:
-        (self.commands[command.command])(self, command.args)
+    if len(self.input_messages):
+      message = self.input_messages.pop(0)
+      if message.action in self.messages:
+        (self.messages[message.action])(self, message.args)
       elif self.player:
-        self.player.do_command(command)
-        if len(self.player.output_queue):
-          self.output_commands.extend(self.player.output_queue)
+        self.player.do_command(message)
+        self.output_messages.extend(self.player.output_queue)
+        self.player.output_queue.clear()
   
   def do_login(self, args):
     if not len(args) == 3:
@@ -87,9 +86,14 @@ class Client:
           print('Logging in "', username, '" from', self.address)
           self.player = player
     
+  def do_logout(self, args):
+    print('logging out', self.address)
+    self.disconnect = True
 
   def close(self, args=[]):
-    print('logging out', self.address)
+    print('saving player and closing: {}'.format(self.address))
+    with shelve.open('data/users') as users:
+      users[self.player.username] = self.player
     self.connection.close()
 
 class Server:
