@@ -3,13 +3,15 @@ from time import sleep
 
 HOST = '127.0.0.1'
 PORT = 4321
+address = (HOST, PORT)
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-  sock.connect((HOST, PORT))
+def send_message(message, socket):
+  socket.sendto(message, address)
+
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
   print('sending messages')
-  sock.sendall(b'login~foo;1234;1\n')
-  sock.sendall(b'move~n\n')
-  sock.sendall(b'move~n\n')
+  send_message(b'login~foo;1234;1\n', sock)
+  send_message(b'move~n\n', sock)
   sleep(.5)
   data = sock.recv(256)
   sleep(.5)
