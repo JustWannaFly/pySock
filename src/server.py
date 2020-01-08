@@ -105,11 +105,12 @@ class Server:
     self.clients = {}
   
   def __process_connect(self, socket):
-    connection, address = socket.accept()
-    connection.setblocking(False)
-    client = Client(connection, address)
+    print('socket:', socket)
+    address = socket.laddr
+    print('address:', address)
+    client = Client(address)
     self.clients[address] = client
-    self.selector.register(connection, selectors.EVENT_READ, data=client)
+    #self.selector.register(connection, selectors.EVENT_READ, data=client)
     print('Initial connection from', address)
     print('Total Clients:', len(self.clients))
   
@@ -127,9 +128,9 @@ class Server:
     if self.socket:
       return
 
-    self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     self.socket.bind(self.address)
-    self.socket.listen()
+    #self.socket.listen()
     self.socket.setblocking(False)
     self.selector.register(self.socket, selectors.EVENT_READ, data=None)
     print('Listening on', self.address)
@@ -137,16 +138,20 @@ class Server:
   def read(self):
     events = self.selector.select(0)
     for key, mask in events:
+      print('key:', key)
+      print('mask:', mask)
       socket = key.fileobj
-      client = key.data
-      if client is None:
-        self.__process_connect(socket)
+      data, address = socket.recvfrom('2048')
+      if self.clients[address] is None:
+        print('need to login the new address')
+        # todo attempt login
+        #self.__process_connect(socket)
       else:
         try:
-          client.read_input()
+          self.clients[address].read_input()
         except OSError:
-          print('error reading from', client.address)
-          client.disconnect = True
+          print('error reading from', address)
+          self.clients.remove(address)
   
   def send(self):
     for client in self.clients.values():
