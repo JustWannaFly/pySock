@@ -20,5 +20,5 @@ class Player(world.Entity):
     if command.action == PLAYER_COMMANDS.move:
       self.move(command.args[0])
       message = Message()
-      message.build('position', ['self', self.position])
+      message('position', ['self', self.position])
       self.output_queue.append(message)

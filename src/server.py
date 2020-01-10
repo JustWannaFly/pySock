@@ -88,7 +88,7 @@ class Client:
     print('logging out', self.address)
     self.disconnect = True
 
-  def close(self, args=[]):
+  def save(self, args=[]):
     print('saving player and closing: {}'.format(self.address))
     with shelve.open('data/users') as users:
       users[self.player.username] = self.player
@@ -104,6 +104,7 @@ class Server:
   
   def __login_client(self, address, args):
     if not len(args) == 3:
+      print(args)
       print('Malformed login request from', address)
       # TODO reply with error
       return
@@ -129,12 +130,12 @@ class Server:
           client.player = player
           self.clients.update({address: client})
           print('active connections: ', self.clients)
-          # TODO reply with success
+          message = Message(SERVER_COMMANDS.login, ['success'])
+          client.output_messages.append(message)
   
   def __disconnect_client(self, client):
     print('disconnecting:', client.address)
-    self.selector.unregister(client.connection)
-    client.close()
+    client.save()
     self.clients.pop(client.address)
     print('Total Clients:', len(self.clients))
   
@@ -147,7 +148,6 @@ class Server:
 
     self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     self.socket.bind(self.address)
-    #self.socket.listen()
     self.socket.setblocking(False)
     self.selector.register(self.socket, selectors.EVENT_READ, data=None)
     print('Listening on', self.address)
@@ -155,28 +155,29 @@ class Server:
   def read(self):
     events = self.selector.select(0)
     for key, mask in events:
-      print('key:', key)
-      print('mask:', mask)
       socket = key.fileobj
       data, address = socket.recvfrom(2048)
       client = self.clients.get(address)
       if client is None:
         print('need to login the new address')
-        # todo attempt login
         command = Message()
+        print('loginRequest: ', data)
+        print('commandArgs pre parsing:', command.args)
         data = command.parse(data)
         if command.action == SERVER_COMMANDS.login:
           self.__login_client(address, command.args)
-      else:
-        try:
-          client.read_input()
-        except OSError:
-          print('error reading from', address)
-          self.clients.pop(address)
+      while data:
+        command = Message()
+        data = command.parse(data)
+        client.input_messages.append(command)
   
   def send(self):
     for client in self.clients.values():
-      client.send_output()
+      while len(client.output_messages):
+        command = client.output_messages.pop(0)
+        print('sending: ', client.address, command.action)
+        self.socket.sendto(command.encode(), client.address)
+
   
   def step_clients(self):
     now = time()
@@ -185,7 +186,7 @@ class Server:
       client = self.clients[key]
       # check if should close
       if client.disconnect or self.__is_timed_out(now, client):
-        self.__process_disconnect(client)
+        self.__disconnect_client(client)
       # steps clients
       else:
         client.step()

@@ -10,14 +10,9 @@ class PLAYER_COMMANDS:
   move = 'move'
 
 class Message:
-  def __init__(self):
-    self.action = ''
-    self.args = []
-
-  def build(self, action, args=[]):
+  def __init__(self, action='', args=[]):
     self.action = action
-    for arg in args:
-      self.args.append(str(arg))
+    self.args = args
 
   def parse(self, input_data=b''):
     # isolate the first command in the input string
@@ -44,4 +39,4 @@ class Message:
       output += arg + arg_separator.decode()
     # remove the last separator as it's not needed
     output = output[:-1]
-    return output + command_end.decode()
+    return (output + command_end.decode()).encode()
